@@ -39,16 +39,16 @@ namespace Unity.RenderStreaming
         Button6,
         Button7,
         Button8,
-        button9,
-        axis0Button,
-        axis1Button,
-        dpadUp,
-        dpadDown,
-        dpadLeft,
-        dpadRight,
-        axis0 = 100,
-        axis1
-        
+        Button9,
+        Axis0Button,
+        Axis1Button,
+        DpadUp,
+        DpadDown,
+        DpadLeft,
+        DpadRight,
+        Axis0 = 100,
+        Axis1
+
     }
 
     public static class RemoteInput
@@ -149,7 +149,7 @@ namespace Unity.RenderStreaming
                             ChangeEndStateUnusedTouches(touches);
                         }
                     }
-                    
+
                     break;
                 case EventType.ButtonClick:
                     var elementId = BitConverter.ToInt16(bytes, 1);
@@ -168,7 +168,7 @@ namespace Unity.RenderStreaming
                         }
 
                         GamepadEventType gamepad_type = (GamepadEventType)bytes[9];
-                        
+
                         switch (gamepad_type)
                         {
                             case GamepadEventType.ButtonDown:
@@ -217,16 +217,16 @@ namespace Unity.RenderStreaming
             GamepadState gamepadState = GamepadsStates[id];
             switch(buttonIndex)
             {
-                case GamepadKeyCode.dpadUp:
+                case GamepadKeyCode.DpadUp:
                     buttonToUpdate = GamepadButton.DpadUp;
                     break;
-                case GamepadKeyCode.dpadDown:
+                case GamepadKeyCode.DpadDown:
                     buttonToUpdate = GamepadButton.DpadDown;
                     break;
-                case GamepadKeyCode.dpadLeft:
+                case GamepadKeyCode.DpadLeft:
                     buttonToUpdate = GamepadButton.DpadLeft;
                     break;
-                case GamepadKeyCode.dpadRight:
+                case GamepadKeyCode.DpadRight:
                     buttonToUpdate = GamepadButton.DpadRight;
                     break;
                 case GamepadKeyCode.Button0:
@@ -248,10 +248,10 @@ namespace Unity.RenderStreaming
                 case GamepadKeyCode.Button7:
                     buttonToUpdate = GamepadButton.RightTrigger;
                     gamepadState.rightTrigger = (float) value;
-                    break;    
+                    break;
                 default:
                     UE.Debug.Log("Unmapped button code: " + buttonIndex);
-                    break;                   
+                    break;
             }
             GamepadsStates[id] = gamepadState.WithButton(buttonToUpdate, GamepadEventType.ButtonDown == state || GamepadEventType.ButtonPressed == state);
         }
@@ -259,9 +259,9 @@ namespace Unity.RenderStreaming
         static void ProcessGamepadAxisEvent(double x, double y, GamepadKeyCode axisKeyCode, double id)
         {
             GamepadState gamepadState = GamepadsStates[id];
-            if(axisKeyCode == GamepadKeyCode.axis0)
+            if(axisKeyCode == GamepadKeyCode.Axis0)
                 gamepadState.leftStick = new UE.Vector2((float)x, (float)y);
-            if(axisKeyCode == GamepadKeyCode.axis1)
+            if(axisKeyCode == GamepadKeyCode.Axis1)
                 gamepadState.rightStick = new UE.Vector2((float)x, (float)y);
 
             GamepadsStates[id]= gamepadState;
