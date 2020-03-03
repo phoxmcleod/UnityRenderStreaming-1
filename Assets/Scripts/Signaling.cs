@@ -118,7 +118,7 @@ namespace Unity.RenderStreaming
     }
 
     [Serializable]
-    class OfferResData
+    public class OfferResData
     {
         public string connectionId;
         public string sdp;
@@ -132,19 +132,44 @@ namespace Unity.RenderStreaming
     }
 
     [Serializable]
-    class CandidateContainerResData
+    public class CandidateContainerResData
     {
         public string connectionId;
         public CandidateResData[] candidates;
     }
 
     [Serializable]
-    class CandidateResData
+    public class CandidateResData
     {
+        public string connectionId;
         public string candidate;
         public string sdpMid;
         public int sdpMLineIndex;
     }
+
+    [Serializable]
+    public class SignalingMessage
+    {
+        public string status;
+        public string message;
+        public string sessionId;
+        public string connectionId;
+        public string peerId;
+        public string sdp;
+        public string type;
+        public string candidate;
+        public string sdpMid;
+        public int sdpMLineIndex;
+    }
+
+    [Serializable]
+    public class RoutedMessage<T>
+    {
+        public string from;
+        public string to;
+        public T message;
+    }
+
 #pragma warning restore 0649
 
     public class Signaling
@@ -164,14 +189,14 @@ namespace Unity.RenderStreaming
         }
 
         [Serializable]
-        class AnswerReqData
+        public class AnswerReqData
         {
             public string connectionId;
             public string sdp;
         }
 
         [Serializable]
-        class CandidateReqData
+        public class CandidateReqData
         {
             public string connectionId;
             public string candidate;
