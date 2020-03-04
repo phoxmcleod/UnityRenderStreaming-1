@@ -1,5 +1,5 @@
 # .yamato/upm-ci-template.yml
-{% metadata_file .yamato/environments.yml %}
+{% metadata_file .yamato/meta/environments.yml %}
 
 projects:
   - name: renderstreaming
@@ -13,7 +13,7 @@ pack:
     image: renderstreaming/win10:latest
     flavor: b1.large
   commands:
-    - npm install upm-ci-utils -g --registry https://api.bintray.com/npm/unity/unity-npm
+    - npm install upm-ci-utils@latest -g --registry https://api.bintray.com/npm/unity/unity-npm
     - upm-ci template pack
   artifacts:
     packages:
@@ -34,21 +34,23 @@ test_{{ platform.name }}_{{ editor.version }}:
     image: {{ platform.image }}
     flavor: {{ platform.flavor}}
   commands:
-    - npm install upm-ci-utils -g --registry https://api.bintray.com/npm/unity/unity-npm
+    - patch -u Packages/manifest.json < BuildScripts~/add_internal_registry_manifest.patch
+    {% if platform.name == "win" %}
+    - mkdir upm-ci~\templates\ProjectData~\WebApp
+    - xcopy WebApp upm-ci~\templates\ProjectData~\WebApp /s/e/i
+    {% else %}
+    - cp -r WebApp upm-ci~/templates/ProjectData~/
+    {% endif %}
+    - npm install upm-ci-utils@latest -g --registry https://api.bintray.com/npm/unity/unity-npm
     - upm-ci template test -u {{ editor.version }}
-#  TODO:: `upm-ci template test` is failed using the package on the internal registry.
-#  triggers:
-#    branches:
-#      only:
-#      - "/.*/"
-#      except:
-#      - "master"
   artifacts:
     logs:
       paths:
         - "upm-ci~/test-results/**/*"
   dependencies:
     - .yamato/upm-ci-template.yml#pack
+    - .yamato/upm-ci-webapp.yml#pack_{{ platform.name }}
+    - .yamato/upm-ci-webapp.yml#test_{{ platform.name }}
 {% endfor %}
 {% endfor %}
 
@@ -59,7 +61,7 @@ publish:
     image: package-ci/win10:stable
     flavor: b1.large
   commands:
-    - npm install upm-ci-utils -g --registry https://api.bintray.com/npm/unity/unity-npm
+    - npm install upm-ci-utils@latest -g --registry https://api.bintray.com/npm/unity/unity-npm
     - upm-ci template publish
   triggers:
     tags:

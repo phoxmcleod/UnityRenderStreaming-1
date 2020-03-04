@@ -1,10 +1,9 @@
-﻿﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Unity.WebRTC;
 using System.Text.RegularExpressions;
-//using UnityEditor;
 
 namespace Unity.RenderStreaming
 {
@@ -12,17 +11,16 @@ namespace Unity.RenderStreaming
     public class ButtonClickEvent : UnityEngine.Events.UnityEvent<int> { }
 
     [Serializable]
-    public class ButtonClickElement {
-
+    public class ButtonClickElement
+    {
         [Tooltip("Specifies the ID on the HTML")]
         public int elementId;
         public ButtonClickEvent click;
-
     }
 
-    public class RenderStreaming : MonoBehaviour {
-
-        #pragma warning disable 0649
+    public class RenderStreaming : MonoBehaviour
+    {
+#pragma warning disable 0649
 
         [SerializeField, Tooltip("Signaling server url")]
         private string urlSignaling = "http://localhost";
@@ -43,10 +41,12 @@ namespace Unity.RenderStreaming
         [SerializeField, Tooltip("Camera to capture video stream")]
         private Camera captureCamera;
 
+        [SerializeField, Tooltip("Enable or disable hardware encoder")]
+        private bool hardwareEncoderSupport = true;
+
         [SerializeField, Tooltip("Array to set your own click event")]
         private ButtonClickElement[] arrayButtonClickEvent;
-
-        #pragma warning restore 0649
+#pragma warning restore 0649
 
         private Signaling signaling;
         private Dictionary<string, RTCPeerConnection> pcs = new Dictionary<string, RTCPeerConnection>();
@@ -55,34 +55,36 @@ namespace Unity.RenderStreaming
         private MediaStream videoStream;
         private MediaStream audioStream;
 
-        public void Awake(){
-
-            WebRTC.WebRTC.Initialize();
+        public void Awake()
+        {
+            var encoderType = hardwareEncoderSupport ? EncoderType.Hardware : EncoderType.Software;
+            WebRTC.WebRTC.Initialize(encoderType);
             RemoteInput.Initialize();
             RemoteInput.ActionButtonClick = OnButtonClick;
         }
 
-        public void OnDestroy(){
-
+        public void OnDestroy()
+        {
             WebRTC.WebRTC.Finalize();
             RemoteInput.Destroy();
             Unity.WebRTC.Audio.Stop();
         }
 
-        public IEnumerator Start(){
-
-            if (!WebRTC.WebRTC.HWEncoderSupport){
-                yield break;
+        public IEnumerator Start()
+        {
+            if (captureCamera == null)
+            {
+                captureCamera = Camera.main;
             }
-            videoStream = captureCamera.CaptureStream(streamingSize.x, streamingSize.y);
+            videoStream = captureCamera.CaptureStream(streamingSize.x, streamingSize.y, RenderTextureDepth.DEPTH_24);
             audioStream = Unity.WebRTC.Audio.CaptureStream();
 
             conf = default;
             conf.iceServers = iceServers;
-
-
             StartCoroutine(WebRTC.WebRTC.Update());
         }
+
+        public Vector2Int GetStreamingSize() { return streamingSize; }
 
         void OnEnable() {
 
@@ -115,7 +117,7 @@ namespace Unity.RenderStreaming
                 pc.OnDataChannel = new DelegateOnDataChannel(channel => {
                     OnDataChannel(pc, channel);
                 });
-                
+
                 pc.OnIceCandidate = new DelegateOnIceCandidate(candidate => {
                     signaling.SendCandidate(data.connectionId, candidate);
                 });
@@ -156,7 +158,7 @@ namespace Unity.RenderStreaming
 
             var opCreateAnswer = pc.CreateAnswer(ref options);
             while (opCreateAnswer.MoveNext());
-           
+
             if (opCreateAnswer.isError) {
                 Debug.LogError($"CreateAnswer Error: {opCreateAnswer.error}");
                 return;
