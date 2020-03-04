@@ -70,7 +70,7 @@ namespace Unity.RenderStreaming
             Unity.WebRTC.Audio.Stop();
         }
 
-        public IEnumerator Start()
+        public void Start()
         {
             if (captureCamera == null)
             {
