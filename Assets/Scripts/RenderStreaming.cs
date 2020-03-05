@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -40,7 +40,7 @@ namespace Unity.RenderStreaming
         private float interval = 5.0f;
 
         [SerializeField, Tooltip("Camera to capture video stream")]
-        private Camera captureCamera;
+        private Camera[] captureCameras;
 
         [SerializeField, Tooltip("Enable or disable hardware encoder")]
         private bool hardwareEncoderSupport = true;
@@ -73,12 +73,14 @@ namespace Unity.RenderStreaming
         }
         public IEnumerator Start()
         {
+            /*
             if (captureCamera == null)
             {
                 captureCamera = Camera.main;
             }
-            videoStream = captureCamera.CaptureStream(streamingSize.x, streamingSize.y, RenderTextureDepth.DEPTH_24);
-            audioStream = Unity.WebRTC.Audio.CaptureStream();
+            */
+            videoStream = new MediaStream();
+            audioStream = WebRTC.Audio.CaptureStream();
             signaling = new Signaling(urlSignaling);
             var opCreate = signaling.Create();
             yield return opCreate;
@@ -159,13 +161,28 @@ namespace Unity.RenderStreaming
                 string pattern = @"(a=fmtp:\d+ .*level-asymmetry-allowed=.*)\r\n";
                 _desc.sdp = Regex.Replace(_desc.sdp, pattern, "$1;x-google-start-bitrate=16000;x-google-max-bitrate=160000\r\n");
                 pc.SetRemoteDescription(ref _desc);
-                foreach (var track in videoStream.GetTracks())
+
+                //captureCamera.CaptureVideoStreamTrack(streamingSize.x, streamingSize.y);
+
+                foreach (var camera in captureCameras)
                 {
-                    pc.AddTrack(track);
+                    if (camera.targetTexture == null)
+                    {
+                        var format = WebRTC.WebRTC.GetSupportedRenderTextureFormat(SystemInfo.graphicsDeviceType);
+                        var depthValue = RenderTextureDepth.DEPTH_24;
+                        var rt = new RenderTexture(streamingSize.x, streamingSize.y, (int)depthValue, format);
+                        rt.Create();
+                        camera.targetTexture = rt;
+                    }
+                    var ptr = camera.targetTexture.GetNativeTexturePtr();
+                    var width = camera.targetTexture.width;
+                    var height = camera.targetTexture.height;
+                    var track = new VideoStreamTrack(camera.name, ptr, width, height, 1000000);
+                    pc.AddTrack(track, videoStream);
                 }
                 foreach(var track in audioStream.GetTracks())
                 {
-                    pc.AddTrack(track);
+                    pc.AddTrack(track, audioStream);
                 }
                 StartCoroutine(Answer(connectionId));
             }
