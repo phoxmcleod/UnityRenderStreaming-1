@@ -194,19 +194,21 @@ namespace Unity.RenderStreaming
             var pc = pcs[connectionId];
             var op = pc.CreateAnswer(ref options);
             yield return op;
-            if (op.isError)
+            if (op.IsError)
             {
-                Debug.LogError($"Network Error: {op.error}");
+                Debug.LogError($"Network Error: {op.Error}");
                 yield break;
             }
-            var opLocalDesc = pc.SetLocalDescription(ref op.desc);
+
+            var desc = op.Desc;
+            var opLocalDesc = pc.SetLocalDescription(ref desc);
             yield return opLocalDesc;
-            if (opLocalDesc.isError)
+            if (opLocalDesc.IsError)
             {
-                Debug.LogError($"Network Error: {opLocalDesc.error}");
+                Debug.LogError($"Network Error: {opLocalDesc.Error}");
                 yield break;
             }
-            var op3 = signaling.PostAnswer(this.sessionId, connectionId, op.desc.sdp);
+            var op3 = signaling.PostAnswer(this.sessionId, connectionId, op.Desc.sdp);
             yield return op3;
             if (op3.webRequest.isNetworkError)
             {
