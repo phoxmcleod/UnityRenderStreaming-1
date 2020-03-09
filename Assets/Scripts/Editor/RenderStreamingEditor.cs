@@ -13,6 +13,7 @@ public class RenderStreamingEditor : Editor
             ShowIceServerList(serializedObject.FindProperty("iceServers"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("interval"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("streamingSize"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("bitrate"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("captureCameras"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("hardwareEncoderSupport"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("arrayButtonClickEvent"), true);

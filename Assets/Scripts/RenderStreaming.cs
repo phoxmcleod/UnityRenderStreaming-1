@@ -36,6 +36,9 @@ namespace Unity.RenderStreaming
         [SerializeField, Tooltip("Streaming size should match display aspect ratio")]
         private Vector2Int streamingSize = new Vector2Int(1280, 720);
 
+        [SerializeField, Tooltip("Streaming bit rate")]
+        private int bitrate = 1000000;
+
         [SerializeField, Tooltip("Time interval for polling from signaling server")]
         private float interval = 5.0f;
 
@@ -56,6 +59,7 @@ namespace Unity.RenderStreaming
         private string sessionId;
         private MediaStream videoStream;
         private MediaStream audioStream;
+        private List<VideoStreamTrack> videoTracks = new List<VideoStreamTrack>();
 
         public void Awake()
         {
@@ -67,13 +71,20 @@ namespace Unity.RenderStreaming
 
         public void OnDestroy()
         {
-            WebRTC.WebRTC.Finalize();
+            WebRTC.WebRTC.Dispose();
             RemoteInput.Destroy();
             Unity.WebRTC.Audio.Stop();
         }
+
+        private VideoStreamTrack videoTrack;
+
         public IEnumerator Start()
         {
             videoStream = new MediaStream();
+            foreach (var _camera in captureCameras)
+            {
+                videoTracks.Add(_camera.CaptureStreamTrack(streamingSize.x, streamingSize.y, bitrate));
+            }
             audioStream = WebRTC.Audio.CaptureStream();
             signaling = new Signaling(urlSignaling);
             var opCreate = signaling.Create();
@@ -94,8 +105,8 @@ namespace Unity.RenderStreaming
 
         public Vector2Int GetStreamingSize() { return streamingSize; }
 
-        long lastTimeGetOfferRequest = 0;
-        long lastTimeGetCandidateRequest = 0;
+        long lastTimeGetOfferRequest;
+        long lastTimeGetCandidateRequest;
 
         IEnumerator LoopPolling()
         {
@@ -141,40 +152,29 @@ namespace Unity.RenderStreaming
                 var pc = new RTCPeerConnection();
                 pcs.Add(offer.connectionId, pc);
 
-                pc.OnDataChannel = new DelegateOnDataChannel(channel => { OnDataChannel(pc, channel); });
+                pc.OnDataChannel = channel => { OnDataChannel(pc, channel); };
                 pc.SetConfiguration(ref conf);
-                pc.OnIceCandidate = new DelegateOnIceCandidate(candidate => { StartCoroutine(OnIceCandidate(offer.connectionId, candidate)); });
-                pc.OnIceConnectionChange = new DelegateOnIceConnectionChange(state =>
+                pc.OnIceCandidate = candidate => { StartCoroutine(OnIceCandidate(offer.connectionId, candidate)); };
+                pc.OnIceConnectionChange = state =>
                 {
                     if(state == RTCIceConnectionState.Disconnected)
                     {
                         pc.Close();
                     }
-                });
+                };
                 //make video bit rate starts at 16000kbits, and 160000kbits at max.
                 string pattern = @"(a=fmtp:\d+ .*level-asymmetry-allowed=.*)\r\n";
                 _desc.sdp = Regex.Replace(_desc.sdp, pattern, "$1;x-google-start-bitrate=16000;x-google-max-bitrate=160000\r\n");
                 pc.SetRemoteDescription(ref _desc);
 
-                foreach (var camera in captureCameras)
+                foreach (var track in videoTracks)
                 {
-                    if (camera.targetTexture == null)
-                    {
-                        var format = WebRTC.WebRTC.GetSupportedRenderTextureFormat(SystemInfo.graphicsDeviceType);
-                        var depthValue = RenderTextureDepth.DEPTH_24;
-                        var rt = new RenderTexture(streamingSize.x, streamingSize.y, (int)depthValue, format);
-                        rt.Create();
-                        camera.targetTexture = rt;
-                    }
-                    var ptr = camera.targetTexture.GetNativeTexturePtr();
-                    var width = camera.targetTexture.width;
-                    var height = camera.targetTexture.height;
-                    var track = new VideoStreamTrack(camera.name, ptr, width, height, 1000000);
-                    pc.AddTrack(track, videoStream);
+                    pc.AddTrack(track);
                 }
+
                 foreach(var track in audioStream.GetTracks())
                 {
-                    pc.AddTrack(track, audioStream);
+                    pc.AddTrack(track);
                 }
                 StartCoroutine(Answer(connectionId));
             }
@@ -205,7 +205,6 @@ namespace Unity.RenderStreaming
             if (op3.webRequest.isNetworkError)
             {
                 Debug.LogError($"Network Error: {op3.webRequest.error}");
-                yield break;
             }
         }
 
@@ -236,7 +235,7 @@ namespace Unity.RenderStreaming
                 }
                 foreach (var candidate in candidateContainer.candidates)
                 {
-                    RTCIceCandidate _candidate = default;
+                    RTCIceCandidate​ _candidate = default;
                     _candidate.candidate = candidate.candidate;
                     _candidate.sdpMLineIndex = candidate.sdpMLineIndex;
                     _candidate.sdpMid = candidate.sdpMid;
@@ -246,14 +245,13 @@ namespace Unity.RenderStreaming
             }
         }
 
-        IEnumerator OnIceCandidate(string connectionId, RTCIceCandidate candidate)
+        IEnumerator OnIceCandidate(string connectionId, RTCIceCandidate​ candidate)
         {
             var opCandidate = signaling.PostCandidate(sessionId, connectionId, candidate.candidate, candidate.sdpMid, candidate.sdpMLineIndex);
             yield return opCandidate;
             if (opCandidate.webRequest.isNetworkError)
             {
                 Debug.LogError($"Network Error: {opCandidate.webRequest.error}");
-                yield break;
             }
         }
         void OnDataChannel(RTCPeerConnection pc, RTCDataChannel channel)
@@ -268,8 +266,8 @@ namespace Unity.RenderStreaming
 
             if(channel.Label == "data")
             {
-                channel.OnMessage = new DelegateOnMessage(bytes => { RemoteInput.ProcessInput(bytes); });
-                channel.OnClose = new DelegateOnClose(() => { RemoteInput.Reset(); });
+                channel.OnMessage = bytes => { RemoteInput.ProcessInput(bytes); };
+                channel.OnClose = () => { RemoteInput.Reset(); };
             }
         }
 
