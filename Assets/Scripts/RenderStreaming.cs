@@ -73,12 +73,6 @@ namespace Unity.RenderStreaming
         }
         public IEnumerator Start()
         {
-            /*
-            if (captureCamera == null)
-            {
-                captureCamera = Camera.main;
-            }
-            */
             videoStream = new MediaStream();
             audioStream = WebRTC.Audio.CaptureStream();
             signaling = new Signaling(urlSignaling);
@@ -161,8 +155,6 @@ namespace Unity.RenderStreaming
                 string pattern = @"(a=fmtp:\d+ .*level-asymmetry-allowed=.*)\r\n";
                 _desc.sdp = Regex.Replace(_desc.sdp, pattern, "$1;x-google-start-bitrate=16000;x-google-max-bitrate=160000\r\n");
                 pc.SetRemoteDescription(ref _desc);
-
-                //captureCamera.CaptureVideoStreamTrack(streamingSize.x, streamingSize.y);
 
                 foreach (var camera in captureCameras)
                 {
